@@ -16,6 +16,8 @@ def rotacion_izquierda(arbol_avl, nodo_avl):
     if nueva_raiz.leftnode is not None:     # siempre y cuando ese nodo tenga hijo; se valida en esta función.
         nueva_raiz.leftnode.parent = nodo_avl
     
+    nueva_raiz.parent = nodo_avl.parent # el padre de la nueva raíz debe ser el mismo padre del nodo que antes era raíz.
+    
     if nodo_avl.parent is None:     # si el nodo es la actual raíz, es decir, no tiene padre; actualizamos la raíz.
         arbol_avl.root = nueva_raiz
     elif nodo_avl == nodo_avl.parent.leftnode:  # si el nodo es el hijo izquierdo de la raíz, actualizamos su padre.
@@ -26,6 +28,8 @@ def rotacion_izquierda(arbol_avl, nodo_avl):
     nueva_raiz.leftnode = nodo_avl  # el hizo izquierdo de la nueva raíz pasa a ser el nodo que era raíz.
     nodo_avl.parent = nueva_raiz    # el nodo que era raíz inicialmente tiene una nueva raíz.
     
+    actualizar_factor_balanceo(nodo_avl)
+    actualizar_factor_balanceo(nueva_raiz)
     return nueva_raiz
 
 def rotacion_derecha(arbol_avl, nodo_avl):
@@ -34,6 +38,8 @@ def rotacion_derecha(arbol_avl, nodo_avl):
     
     if nueva_raiz.rightnode is not None:        # siempre y cuando ese nodo tenga un hijo; se valida en esta función.
         nueva_raiz.rightnode.parent = nodo_avl
+    
+    nueva_raiz.parent = nodo_avl.parent # el padre de la nueva raíz debe ser el mismo padre del nodo que antes era raíz.
     
     if nodo_avl.parent is None:     # si el nodo es la actual raíz, actualizamos la nueva raíz.
         arbol_avl.root = nueva_raiz
@@ -45,12 +51,21 @@ def rotacion_derecha(arbol_avl, nodo_avl):
     nueva_raiz.rightnode = nodo_avl     # el hijo derecho de la nueva raíz pasa a ser el nodo que era raíz inicialmente.
     nodo_avl.parent = nueva_raiz        # el nodo que era raíz pasa a tener un padre que es la nueva raíz.
     
+    actualizar_factor_balanceo(nueva_raiz)
+    actualizar_factor_balanceo(nodo_avl)
     return nueva_raiz   # retornamos la raíz actualizada.
 
 def altura_arbol(nodo_avl):
     if nodo_avl is None:    
         return 0
     return 1 + max(altura_arbol(nodo_avl.leftnode), altura_arbol(nodo_avl.rightnode))   # retorna la altura de los subárboles para calcular el bf.
+
+def actualizar_factor_balanceo(nodo_avl):
+    if nodo_avl is None:
+        return
+    altura_izq = altura_arbol(nodo_avl.leftnode)
+    altura_der = altura_arbol(nodo_avl.rightnode)
+    nodo_avl.bf = altura_izq - altura_der
 
 def calcular_factor_balanceo(nodo_avl):
     if nodo_avl is None:    # caso base, si no hay mas nodos hijos, se retorna 0.
@@ -114,7 +129,7 @@ def insertR(node, element, key):
             node.leftnode = nuevo
             return nuevo
         else:
-            return insertR(node.leftnode, key, element)
+            return insertR(node.leftnode, element, key)
     elif key > node.key:
         if node.rightnode is None:
             nuevo = AVLNode()
@@ -127,7 +142,7 @@ def insertR(node, element, key):
             node.rightnode = nuevo
             return nuevo
         else:
-            return insertR(node.rightnode, key, element)
+            return insertR(node.rightnode, element, key)
     else:
         return None
 
@@ -143,14 +158,12 @@ def insert(B, element, key):
         raiz.bf = 0
         B.root = raiz
         return raiz
-    nodo_insertado = insertR(B.root, key, element)  # si el árbol no está vacío se busca la posición donde debe ser insertado.
+    nodo_insertado = insertR(B.root, element, key)  # si el árbol no está vacío se busca la posición donde debe ser insertado.
     if nodo_insertado is None:  # si la key del nodo a insertar ya existía, no se inserta.
         return None
     nodo_rebalanceado = nodo_insertado.parent
     while nodo_rebalanceado is not None:    # se hace el rebalanceo hasta que no hayan más nodos padres.
-        altura_izq = altura_arbol(nodo_rebalanceado.leftnode)
-        altura_der = altura_arbol(nodo_rebalanceado.rightnode)
-        nodo_rebalanceado.bf = altura_izq - altura_der
+        actualizar_factor_balanceo(nodo_rebalanceado)
         if nodo_rebalanceado.bf > 1:
             if nodo_rebalanceado.leftnode.bf >= 0:
                 nueva_raiz = rotacion_derecha(B, nodo_rebalanceado)
@@ -255,9 +268,7 @@ def delete(B, key):
     key_eliminado = eliminar_segun_caso(B, nodo)
     nodo_actual = nodo.parent
     while nodo_actual is not None:  # se rebalancea el árbol desde el padre del nodo eliminado hacia arriba.
-        altura_izq = altura_arbol(nodo_actual.leftnode)
-        altura_der = altura_arbol(nodo_actual.rightnode)
-        nodo_actual.bf = altura_izq - altura_der
+        actualizar_factor_balanceo(nodo_actual)
         if nodo_actual.bf > 1 or nodo_actual.bf < -1:
             if nodo_actual.parent is None:
                 B.root = rebalancear_subarbol(B, nodo_actual)
